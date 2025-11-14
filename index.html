@@ -1,163 +1,70 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Production API Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #050510;
-      color: #f5f5f5;
-      margin: 0;
-      padding: 24px;
-    }
-    .card {
-      max-width: 600px;
-      margin: 0 auto;
-      background: #111322;
-      border-radius: 16px;
-      padding: 20px 24px;
-      box-shadow: 0 18px 45px rgba(0,0,0,0.55);
-      border: 1px solid #1f2436;
-    }
-    h1 {
-      font-size: 22px;
-      margin-bottom: 6px;
-    }
-    h2 {
-      font-size: 16px;
-      margin-top: 20px;
-      margin-bottom: 8px;
-      color: #b4b8ff;
-    }
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      font-size: 10px;
-      border-radius: 999px;
-      background: #1b2338;
-      color: #9ea5ff;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-    .row {
-      display: flex;
-      gap: 16px;
-      margin-top: 12px;
-      flex-wrap: wrap;
-    }
-    .stat {
-      flex: 1;
-      min-width: 120px;
-      background: #161a2b;
-      border-radius: 12px;
-      padding: 10px 12px;
-      border: 1px solid #23283d;
-    }
-    .label {
-      font-size: 11px;
-      color: #9ca3c7;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-    .value {
-      margin-top: 6px;
-      font-size: 18px;
-      font-weight: 600;
-    }
-    pre {
-      margin-top: 6px;
-      padding: 10px 12px;
-      background: #050712;
-      border-radius: 10px;
-      font-size: 11px;
-      overflow-x: auto;
-      border: 1px solid #23283d;
-    }
-    button {
-      margin-top: 18px;
-      padding: 8px 14px;
-      border-radius: 999px;
-      border: none;
-      background: #6366f1;
-      color: white;
-      font-size: 13px;
-      font-weight: 600;
-    }
-    button:active {
-      transform: scale(0.98);
-    }
-    .small {
-      font-size: 11px;
-      color: #7f86b7;
-      margin-top: 10px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production Dashboard</title>
+    <style>
+        body {
+            background: #0d0d0d;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        h1 {
+            font-size: 34px;
+            margin-bottom: 25px;
+        }
+        .box {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .signal {
+            padding: 12px;
+            background: #222;
+            margin-bottom: 12px;
+            border-left: 4px solid #00ff88;
+            line-height: 1.4;
+        }
+    </style>
 </head>
 <body>
-  <div class="card">
-    <span class="badge">Production API · v1</span>
-    <h1>Demand Pulse Dashboard</h1>
-    <div class="small">
-      Connected to your backend:
-      <code>https://production-api-ftvs.onrender.com</code>
+
+    <h1>Production API — Live Demand Signals</h1>
+
+    <div class="box">
+        <h2>Latest Signals</h2>
+        <div id="signals">Loading...</div>
     </div>
 
-    <div class="row">
-      <div class="stat">
-        <div class="label">Signals count</div>
-        <div class="value" id="signalsCount">–</div>
-      </div>
-      <div class="stat">
-        <div class="label">Index</div>
-        <div class="value" id="indexValue">–</div>
-      </div>
-    </div>
+    <script>
+        async function loadSignals() {
+            try {
+                const res = await fetch("https://production-api-ftvs.onrender.com/index");
+                const data = await res.json();
 
-    <h2>Last signal</h2>
-    <pre id="lastSignal">Loading…</pre>
+                let html = "";
+                data.forEach(sig => {
+                    html += `
+                        <div class="signal">
+                            <strong>Source:</strong> ${sig.source}<br>
+                            <strong>Value:</strong> ${sig.value}<br>
+                            <strong>Time:</strong> ${sig.timestamp}
+                        </div>
+                    `;
+                });
 
-    <h2>Pulse (latest signals)</h2>
-    <pre id="pulseList">Loading…</pre>
+                document.getElementById("signals").innerHTML = html;
+            } catch (err) {
+                document.getElementById("signals").innerHTML = "Error loading signals.";
+            }
+        }
 
-    <button onclick="refresh()">Refresh now</button>
-  </div>
+        loadSignals();
+        setInterval(loadSignals, 5000);
+    </script>
 
-  <script>
-    const API_BASE = "https://production-api-ftvs.onrender.com";
-
-    async function refresh() {
-      try {
-        const [indexRes, pulseRes] = await Promise.all([
-          fetch(API_BASE + "/index"),
-          fetch(API_BASE + "/pulse?limit=10")
-        ]);
-
-        const indexData = await indexRes.json();
-        const pulseData = await pulseRes.json();
-
-        document.getElementById("signalsCount").textContent =
-          indexData.signals_count ?? "0";
-        document.getElementById("indexValue").textContent =
-          indexData.index ?? "0";
-
-        document.getElementById("lastSignal").textContent =
-          indexData.last_signal
-            ? JSON.stringify(indexData.last_signal, null, 2)
-            : "No signals yet.";
-
-        document.getElementById("pulseList").textContent =
-          Array.isArray(pulseData) && pulseData.length
-            ? JSON.stringify(pulseData, null, 2)
-            : "No signals yet.";
-      } catch (err) {
-        document.getElementById("lastSignal").textContent =
-          "Error loading data: " + err;
-      }
-    }
-
-    refresh();
-  </script>
 </body>
 </html>
